@@ -24,14 +24,23 @@ function RecipePage() {
     setShowConfirmation(false);
 
     try {
+      // 生成完整的URL
+      const baseUrl = window.location.hostname === 'localhost' 
+        ? "http://localhost:5001" 
+        : "";
+      
       const apiUrl = isRegenerate
-        ? "/api/regenerate-recipe"
-        : "/api/generate-recipe";
+        ? `${baseUrl}/api/regenerate-recipe`
+        : `${baseUrl}/api/generate-recipe`;
+
+      console.log("Sending request to:", apiUrl);
 
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // 添加CORS相关头
+          "Access-Control-Allow-Origin": "*"
         },
         body: JSON.stringify({
           ingredients: ingredients,
@@ -43,13 +52,22 @@ function RecipePage() {
       });
 
       if (!response.ok) {
-        throw new Error("Error generating recipe, please try again later");
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
       console.log("Recipe API response:", data); // 添加调试日志
       setRecipeData(data);
       setShowConfirmation(data.needUserConfirmation || false);
+      // 新增调试日志
+      console.log("Recipe data set:", {
+        name: data.name,
+        ingredients: data.ingredients?.length || 0,
+        steps: data.steps?.length || 0,
+        hasImage: !!data.imageUrl,
+        confirmation: data.needUserConfirmation
+      });
     } catch (error) {
       console.error("Error:", error);
       setErrorMessage(error.message);
@@ -65,10 +83,19 @@ function RecipePage() {
     setShowConfirmation(false);
 
     try {
-      const response = await fetch("/api/generate-recipe", {
+      // 生成完整的URL
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? "http://localhost:5001/api/generate-recipe" 
+        : "/api/generate-recipe";
+
+      console.log("Sending request to:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // 添加CORS相关头
+          "Access-Control-Allow-Origin": "*"
         },
         body: JSON.stringify({
           ingredients: ingredients,
@@ -81,7 +108,8 @@ function RecipePage() {
       });
 
       if (!response.ok) {
-        throw new Error("Error generating image, please try again later");
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
@@ -101,6 +129,16 @@ function RecipePage() {
 
   const RecipeDisplay = ({ recipe }) => {
     if (!recipe) return null;
+
+    console.log("Rendering recipe:", {
+      name: recipe.name,
+      ingredientsCount: recipe.ingredients?.length || 0,
+      stepsCount: recipe.steps?.length || 0,
+      tipsCount: recipe.tips?.length || 0,
+      imageUrl: recipe.imageUrl || "没有图片URL",
+      prepTime: recipe.prepTime,
+      cookTime: recipe.cookTime
+    });
 
     return (
 

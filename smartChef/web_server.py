@@ -31,7 +31,7 @@ http_client = httpx.Client()
 client = OpenAI(api_key=openai_api_key, http_client=http_client)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 @app.route('/')
 # def index():
@@ -101,6 +101,7 @@ def api_generate_recipe():
     try:
         # Get request data
         data = request.json
+        print(f"API Request received: {data}")  # 添加调试信息
         ingredients = data.get('ingredients', '')
         cuisine_type = data.get('cuisine_type', '')
         special_requirements = data.get('special_requirements', '')
@@ -108,6 +109,10 @@ def api_generate_recipe():
         generate_image_now = data.get('generate_image_now', False)  # Flag to generate image immediately
         recipe_md = data.get('recipe_markdown', '')  # If request is from "Accept" button, includes already generated recipe
         
+        # 添加更多调试信息
+        print(f"Parsed request data: ingredients={ingredients}, cuisine={cuisine_type}, requirements={special_requirements}")
+        print(f"Image flags: generate_ai_image={generate_ai_image}, generate_image_now={generate_image_now}")
+
         if not ingredients or not cuisine_type:
             return jsonify({'error': 'Please provide ingredients and cuisine type'}), 400
         
@@ -143,31 +148,53 @@ def api_generate_recipe():
             if line.startswith('## Ingredients') or line.startswith('### Ingredients'):
                 section = 'ingredients'
                 continue
-            elif line.startswith('## Steps') or line.startswith('### Steps') or line.startswith('## Preparation') or line.startswith('### Preparation'):
+            elif (line.startswith('## Instructions') or line.startswith('### Instructions') or 
+                  line.startswith('## Steps') or line.startswith('### Steps') or
+                  line.startswith('## Preparation') or line.startswith('### Preparation')):
                 section = 'steps'
                 continue
-            elif line.startswith('## Cooking Tips') or line.startswith('### Cooking Tips'):
+            elif line.startswith('## Cooking Tips') or line.startswith('### Cooking Tips') or line.startswith('## Cooking Tips and Tricks'):
                 section = 'tips'
                 continue
-            elif line.startswith('## Time') or line.startswith('### Time'):
+            elif line.startswith('## Time') or line.startswith('### Time') or line.startswith('## Estimated Time') or line.startswith('### Estimated Time'):
                 section = 'time'
                 continue
             elif line.startswith('##') or line.startswith('###'):
-                section = None
+                # 保持在steps部分如果这是一个数字步骤标题（如 ### 1. Preparing the Ingredients）
+                if section == 'steps' and any(f"{i}." in line for i in range(1, 10)):
+                    continue
+                else:
+                    section = None
                 continue
                 
             if section == 'ingredients' and line.startswith('-'):
                 ingredients_list.append(line[1:].strip())
-            elif section == 'steps' and (line.startswith('-') or line.startswith('1.') or line.startswith('1、')):
-                # Remove number prefix
-                step = line
-                if line[0].isdigit():
-                    parts = line.split('.', 1) if '.' in line else line.split('、', 1)
-                    if len(parts) > 1:
-                        step = parts[1].strip()
-                elif line.startswith('-'):
-                    step = line[1:].strip()
-                steps_list.append(step)
+            elif section == 'steps' and line:
+                # 处理数字前缀的步骤
+                if line.startswith('-') or line.startswith('1.') or line.startswith('1、') or line[0].isdigit():
+                    # 处理前缀
+                    step = line
+                    if line[0].isdigit():
+                        if '.' in line:
+                            parts = line.split('.', 1)
+                            if len(parts) > 1:
+                                step = parts[1].strip()
+                        elif '、' in line:
+                            parts = line.split('、', 1)
+                            if len(parts) > 1:
+                                step = parts[1].strip()
+                        elif ':' in line:
+                            parts = line.split(':', 1)
+                            if len(parts) > 1:
+                                step = parts[1].strip()
+                    elif line.startswith('-'):
+                        step = line[1:].strip()
+                    
+                    if step.strip():  # 确保步骤不是空字符串
+                        steps_list.append(step.strip())
+                # 如果这一行不是空的，并且不是以标题开头的，而且长度至少有10个字符，那么可能是步骤的一部分
+                elif len(line) > 10 and not line.startswith('#'):
+                    steps_list.append(line)
             elif section == 'tips' and line.startswith('-'):
                 tips_list.append(line[1:].strip())
             elif section == 'time' and ('Preparation time' in line or 'Prep time' in line):
@@ -185,7 +212,7 @@ def api_generate_recipe():
         
         # If not generating image immediately, return structured data without image
         if not generate_image_now:
-            return jsonify({
+            response_data = {
                 'name': recipe_name,
                 'ingredients': ingredients_list,
                 'steps': steps_list,
@@ -194,7 +221,9 @@ def api_generate_recipe():
                 'cookTime': cook_time,
                 'markdown': recipe_markdown,
                 'needUserConfirmation': True  # Indicate to frontend to show confirmation button
-            })
+            }
+            print(f"Returning initial recipe data (no image yet): {response_data}")
+            return jsonify(response_data)
         
         # Based on user choice, decide whether to use AI to generate image
         if generate_ai_image:
@@ -211,7 +240,7 @@ def api_generate_recipe():
         saved_file = save_recipe(recipe_markdown, recipe_name)
         
         # Return structured data
-        return jsonify({
+        response_data = {
             'name': recipe_name,
             'ingredients': ingredients_list,
             'steps': steps_list,
@@ -224,7 +253,9 @@ def api_generate_recipe():
             'savedFile': saved_file,
             'aiImageGenerated': generate_ai_image,
             'needUserConfirmation': False  # Already confirmed, no need to show confirmation button
-        })
+        }
+        print(f"Returning recipe with image data: {response_data}")
+        return jsonify(response_data)
         
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -270,31 +301,53 @@ def api_regenerate_recipe():
             if line.startswith('## Ingredients') or line.startswith('### Ingredients'):
                 section = 'ingredients'
                 continue
-            elif line.startswith('## Steps') or line.startswith('### Steps') or line.startswith('## Preparation') or line.startswith('### Preparation'):
+            elif (line.startswith('## Instructions') or line.startswith('### Instructions') or 
+                  line.startswith('## Steps') or line.startswith('### Steps') or
+                  line.startswith('## Preparation') or line.startswith('### Preparation')):
                 section = 'steps'
                 continue
-            elif line.startswith('## Cooking Tips') or line.startswith('### Cooking Tips'):
+            elif line.startswith('## Cooking Tips') or line.startswith('### Cooking Tips') or line.startswith('## Cooking Tips and Tricks'):
                 section = 'tips'
                 continue
-            elif line.startswith('## Time') or line.startswith('### Time'):
+            elif line.startswith('## Time') or line.startswith('### Time') or line.startswith('## Estimated Time') or line.startswith('### Estimated Time'):
                 section = 'time'
                 continue
             elif line.startswith('##') or line.startswith('###'):
-                section = None
+                # 保持在steps部分如果这是一个数字步骤标题（如 ### 1. Preparing the Ingredients）
+                if section == 'steps' and any(f"{i}." in line for i in range(1, 10)):
+                    continue
+                else:
+                    section = None
                 continue
                 
             if section == 'ingredients' and line.startswith('-'):
                 ingredients_list.append(line[1:].strip())
-            elif section == 'steps' and (line.startswith('-') or line.startswith('1.') or line.startswith('1、')):
-                # Remove number prefix
-                step = line
-                if line[0].isdigit():
-                    parts = line.split('.', 1) if '.' in line else line.split('、', 1)
-                    if len(parts) > 1:
-                        step = parts[1].strip()
-                elif line.startswith('-'):
-                    step = line[1:].strip()
-                steps_list.append(step)
+            elif section == 'steps' and line:
+                # 处理数字前缀的步骤
+                if line.startswith('-') or line.startswith('1.') or line.startswith('1、') or line[0].isdigit():
+                    # 处理前缀
+                    step = line
+                    if line[0].isdigit():
+                        if '.' in line:
+                            parts = line.split('.', 1)
+                            if len(parts) > 1:
+                                step = parts[1].strip()
+                        elif '、' in line:
+                            parts = line.split('、', 1)
+                            if len(parts) > 1:
+                                step = parts[1].strip()
+                        elif ':' in line:
+                            parts = line.split(':', 1)
+                            if len(parts) > 1:
+                                step = parts[1].strip()
+                    elif line.startswith('-'):
+                        step = line[1:].strip()
+                    
+                    if step.strip():  # 确保步骤不是空字符串
+                        steps_list.append(step.strip())
+                # 如果这一行不是空的，并且不是以标题开头的，而且长度至少有10个字符，那么可能是步骤的一部分
+                elif len(line) > 10 and not line.startswith('#'):
+                    steps_list.append(line)
             elif section == 'tips' and line.startswith('-'):
                 tips_list.append(line[1:].strip())
             elif section == 'time' and ('Preparation time' in line or 'Prep time' in line):
