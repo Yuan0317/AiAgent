@@ -1,0 +1,149 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap');
+body {
+    font-family: "Sora", sans-serif;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f7fafc; /* 使用柔和的灰色背景 */
+}
+
+.container {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 更强烈的阴影效果 */
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.container:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); /* 鼠标悬停时添加更深的阴影 */
+}
+
+h1 {
+  color: #333;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 20px; /* 增加间距 */
+}
+
+label {
+  display: block;
+  margin-bottom: 8px; /* 增加标签和输入框的间距 */
+  font-weight: 600;
+  color: #4a5568; /* 更柔和的文本颜色 */
+}
+
+input[type="text"],
+textarea,
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9fafb; /* 淡灰背景 */
+  transition: border-color 0.2s ease-in-out;
+}
+
+input[type="text"]:focus,
+textarea:focus,
+select:focus {
+  border-color: #4caf50; /* 焦点时高亮绿色 */
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3); /* 聚焦时加阴影 */
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.checkbox-group label {
+  margin-left: 10px;
+  font-weight: normal;
+}
+
+button {
+  background-color: #4caf50;
+  color: white;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+button:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+#recipe-result {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 弱阴影效果 */
+}
+
+#loading {
+  text-align: center;
+  margin-top: 20px;
+}
+
+#recipe-img {
+  max-width: 100%;
+  height: auto;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.error {
+  color: #e53e3e;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.ai-image-badge {
+  display: inline-block;
+  background-color: #4caf50;
+  color: white;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-left: 12px;
+}
+
+.image-loading {
+  text-align: center;
+  font-style: italic;
+  color: #a0aec0;
+  margin-top: 15px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4caf50; /* 更改为绿色 */
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 2s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
