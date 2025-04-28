@@ -145,18 +145,25 @@ def api_generate_recipe():
         section = None
         for line in lines:
             line = line.strip()
-            if line.startswith('## Ingredients') or line.startswith('### Ingredients'):
+            # 清理标题中的特殊字符
+            clean_line = line.replace('*', '').replace(':', '').strip()
+            
+            if 'ingredients' in clean_line.lower():
                 section = 'ingredients'
                 continue
-            elif (line.startswith('## Instructions') or line.startswith('### Instructions') or 
-                  line.startswith('## Steps') or line.startswith('### Steps') or
-                  line.startswith('## Preparation') or line.startswith('### Preparation')):
+            elif ('instructions' in clean_line.lower() or 
+                  'steps' in clean_line.lower() or 
+                  'preparation' in clean_line.lower() or
+                  '步骤' in clean_line.lower()):
                 section = 'steps'
                 continue
-            elif line.startswith('## Cooking Tips') or line.startswith('### Cooking Tips') or line.startswith('## Cooking Tips and Tricks'):
+            elif ('cooking tips' in clean_line.lower() or 
+                  'tips' in clean_line.lower() or
+                  '烹饪技巧' in clean_line.lower()):
                 section = 'tips'
                 continue
-            elif line.startswith('## Time') or line.startswith('### Time') or line.startswith('## Estimated Time') or line.startswith('### Estimated Time'):
+            elif ('time' in clean_line.lower() or 
+                  '时间' in clean_line.lower()):
                 section = 'time'
                 continue
             elif line.startswith('##') or line.startswith('###'):
@@ -167,11 +174,13 @@ def api_generate_recipe():
                     section = None
                 continue
                 
-            if section == 'ingredients' and line.startswith('-'):
-                ingredients_list.append(line[1:].strip())
+            if section == 'ingredients' and (line.startswith('-') or line.startswith('•')):
+                ingredients_list.append(line.lstrip('-•').strip())
             elif section == 'steps' and line:
                 # 处理数字前缀的步骤
-                if line.startswith('-') or line.startswith('1.') or line.startswith('1、') or line[0].isdigit():
+                if (line.startswith('-') or line.startswith('•') or 
+                    line.startswith('1.') or line.startswith('1、') or 
+                    line[0].isdigit()):
                     # 处理前缀
                     step = line
                     if line[0].isdigit():
@@ -187,7 +196,7 @@ def api_generate_recipe():
                             parts = line.split(':', 1)
                             if len(parts) > 1:
                                 step = parts[1].strip()
-                    elif line.startswith('-'):
+                    elif line.startswith('-') or line.startswith('•'):
                         step = line[1:].strip()
                     
                     if step.strip():  # 确保步骤不是空字符串
@@ -195,17 +204,27 @@ def api_generate_recipe():
                 # 如果这一行不是空的，并且不是以标题开头的，而且长度至少有10个字符，那么可能是步骤的一部分
                 elif len(line) > 10 and not line.startswith('#'):
                     steps_list.append(line)
-            elif section == 'tips' and line.startswith('-'):
-                tips_list.append(line[1:].strip())
-            elif section == 'time' and ('Preparation time' in line or 'Prep time' in line):
-                if 'Preparation time' in line or 'Prep time' in line:
-                    prep_parts = line.split(':', 1) if ':' in line else line.split('：', 1)
-                    if len(prep_parts) > 1:
-                        prep_time = prep_parts[1].strip().split(' ')[0]
-                if 'Cooking time' in line:
-                    cook_parts = line.split(':', 1) if ':' in line else line.split('：', 1)
-                    if len(cook_parts) > 1:
-                        cook_time = cook_parts[1].strip().split(' ')[0]
+            elif section == 'tips' and (line.startswith('-') or line.startswith('•')):
+                tips_list.append(line.lstrip('-•').strip())
+            elif section == 'time':
+                if any(x in line.lower() for x in ['preparation', 'prep', '准备']):
+                    parts = line.split(':', 1) if ':' in line else line.split('：', 1)
+                    if len(parts) > 1:
+                        time_str = parts[1].strip()
+                        # 提取数字
+                        import re
+                        numbers = re.findall(r'\d+', time_str)
+                        if numbers:
+                            prep_time = numbers[0]
+                if any(x in line.lower() for x in ['cooking', 'cook', '烹饪']):
+                    parts = line.split(':', 1) if ':' in line else line.split('：', 1)
+                    if len(parts) > 1:
+                        time_str = parts[1].strip()
+                        # 提取数字
+                        import re
+                        numbers = re.findall(r'\d+', time_str)
+                        if numbers:
+                            cook_time = numbers[0]
         
         # Build dish description for image generation
         recipe_description = f"A {cuisine_type} dish made with {', '.join(ingredients_list[:3])} and other ingredients."
@@ -298,18 +317,25 @@ def api_regenerate_recipe():
         section = None
         for line in lines:
             line = line.strip()
-            if line.startswith('## Ingredients') or line.startswith('### Ingredients'):
+            # 清理标题中的特殊字符
+            clean_line = line.replace('*', '').replace(':', '').strip()
+            
+            if 'ingredients' in clean_line.lower():
                 section = 'ingredients'
                 continue
-            elif (line.startswith('## Instructions') or line.startswith('### Instructions') or 
-                  line.startswith('## Steps') or line.startswith('### Steps') or
-                  line.startswith('## Preparation') or line.startswith('### Preparation')):
+            elif ('instructions' in clean_line.lower() or 
+                  'steps' in clean_line.lower() or 
+                  'preparation' in clean_line.lower() or
+                  '步骤' in clean_line.lower()):
                 section = 'steps'
                 continue
-            elif line.startswith('## Cooking Tips') or line.startswith('### Cooking Tips') or line.startswith('## Cooking Tips and Tricks'):
+            elif ('cooking tips' in clean_line.lower() or 
+                  'tips' in clean_line.lower() or
+                  '烹饪技巧' in clean_line.lower()):
                 section = 'tips'
                 continue
-            elif line.startswith('## Time') or line.startswith('### Time') or line.startswith('## Estimated Time') or line.startswith('### Estimated Time'):
+            elif ('time' in clean_line.lower() or 
+                  '时间' in clean_line.lower()):
                 section = 'time'
                 continue
             elif line.startswith('##') or line.startswith('###'):
@@ -320,11 +346,13 @@ def api_regenerate_recipe():
                     section = None
                 continue
                 
-            if section == 'ingredients' and line.startswith('-'):
-                ingredients_list.append(line[1:].strip())
+            if section == 'ingredients' and (line.startswith('-') or line.startswith('•')):
+                ingredients_list.append(line.lstrip('-•').strip())
             elif section == 'steps' and line:
                 # 处理数字前缀的步骤
-                if line.startswith('-') or line.startswith('1.') or line.startswith('1、') or line[0].isdigit():
+                if (line.startswith('-') or line.startswith('•') or 
+                    line.startswith('1.') or line.startswith('1、') or 
+                    line[0].isdigit()):
                     # 处理前缀
                     step = line
                     if line[0].isdigit():
@@ -340,7 +368,7 @@ def api_regenerate_recipe():
                             parts = line.split(':', 1)
                             if len(parts) > 1:
                                 step = parts[1].strip()
-                    elif line.startswith('-'):
+                    elif line.startswith('-') or line.startswith('•'):
                         step = line[1:].strip()
                     
                     if step.strip():  # 确保步骤不是空字符串
@@ -348,17 +376,27 @@ def api_regenerate_recipe():
                 # 如果这一行不是空的，并且不是以标题开头的，而且长度至少有10个字符，那么可能是步骤的一部分
                 elif len(line) > 10 and not line.startswith('#'):
                     steps_list.append(line)
-            elif section == 'tips' and line.startswith('-'):
-                tips_list.append(line[1:].strip())
-            elif section == 'time' and ('Preparation time' in line or 'Prep time' in line):
-                if 'Preparation time' in line or 'Prep time' in line:
-                    prep_parts = line.split(':', 1) if ':' in line else line.split('：', 1)
-                    if len(prep_parts) > 1:
-                        prep_time = prep_parts[1].strip().split(' ')[0]
-                if 'Cooking time' in line:
-                    cook_parts = line.split(':', 1) if ':' in line else line.split('：', 1)
-                    if len(cook_parts) > 1:
-                        cook_time = cook_parts[1].strip().split(' ')[0]
+            elif section == 'tips' and (line.startswith('-') or line.startswith('•')):
+                tips_list.append(line.lstrip('-•').strip())
+            elif section == 'time':
+                if any(x in line.lower() for x in ['preparation', 'prep', '准备']):
+                    parts = line.split(':', 1) if ':' in line else line.split('：', 1)
+                    if len(parts) > 1:
+                        time_str = parts[1].strip()
+                        # 提取数字
+                        import re
+                        numbers = re.findall(r'\d+', time_str)
+                        if numbers:
+                            prep_time = numbers[0]
+                if any(x in line.lower() for x in ['cooking', 'cook', '烹饪']):
+                    parts = line.split(':', 1) if ':' in line else line.split('：', 1)
+                    if len(parts) > 1:
+                        time_str = parts[1].strip()
+                        # 提取数字
+                        import re
+                        numbers = re.findall(r'\d+', time_str)
+                        if numbers:
+                            cook_time = numbers[0]
         
         return jsonify({
             'name': recipe_name,

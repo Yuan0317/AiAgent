@@ -34,12 +34,18 @@ function RecipePage() {
         : `${baseUrl}/api/generate-recipe`;
 
       console.log("Sending request to:", apiUrl);
+      console.log("Request data:", {
+        ingredients,
+        cuisine_type: cuisine,
+        special_requirements: requirements,
+        generate_ai_image: true,
+        generate_image_now: false,
+      });
 
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // 添加CORS相关头
           "Access-Control-Allow-Origin": "*"
         },
         body: JSON.stringify({
@@ -53,20 +59,26 @@ function RecipePage() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("API Error:", errorText);
         throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log("Recipe API response:", data); // 添加调试日志
+      console.log("Recipe API response:", data);
+      
+      // 检查数据格式
+      if (!data.name || !data.ingredients || !data.steps) {
+        console.warn("API response missing required fields:", data);
+      }
+      
       setRecipeData(data);
       setShowConfirmation(data.needUserConfirmation || false);
-      // 新增调试日志
-      console.log("Recipe data set:", {
-        name: data.name,
-        ingredients: data.ingredients?.length || 0,
-        steps: data.steps?.length || 0,
-        hasImage: !!data.imageUrl,
-        confirmation: data.needUserConfirmation
+      
+      // 检查状态更新
+      console.log("Recipe state updated:", {
+        hasRecipeData: !!recipeData,
+        showConfirmation,
+        recipeName: data.name
       });
     } catch (error) {
       console.error("Error:", error);
